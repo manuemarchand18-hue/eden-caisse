@@ -1,1 +1,629 @@
-# eden-caisse
+[eden-caisse_3.html](https://github.com/user-attachments/files/28626394/eden-caisse_3.html)
+# eden-caisse<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#5A7A4A">
+<title>Salon Eden — Caisse</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root {
+  --g:#5A7A4A; --gl:#EEF3E8; --gm:#C8D9B8; --gd:#3B5530;
+  --warm:#F7F4EF; --border:rgba(90,122,74,0.2);
+  --radius:12px; --rsm:8px;
+  --text:#222; --muted:#777; --bg:#fff; --bg2:#F7F4EF;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg2);color:var(--text)}
+
+.nav{display:flex;background:var(--g);position:sticky;top:0;z-index:100}
+.nav-btn{flex:1;padding:13px 4px 10px;border:none;background:none;color:rgba(255,255,255,.6);font-size:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .2s}
+.nav-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
+.nav-btn.active{color:#fff;border-bottom:2px solid var(--gm)}
+
+.salon-header{background:var(--g);color:#fff;padding:12px 16px 14px;display:flex;align-items:center;justify-content:space-between}
+.salon-name{font-size:18px;font-weight:600}
+.salon-sub{font-size:11px;color:var(--gm);margin-top:1px}
+.date-pill{background:rgba(255,255,255,.15);border-radius:20px;padding:5px 12px;font-size:12px;color:#fff;cursor:pointer;border:none;font-family:inherit}
+
+.page{display:none;padding:12px;min-height:calc(100vh - 90px)}
+.page.active{display:block}
+.card{background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border);padding:14px;margin-bottom:10px}
+.card-title{font-size:11px;font-weight:600;color:var(--g);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+
+/* ── Cliente card ── */
+.cliente-card{background:var(--bg);border-radius:var(--radius);border:0.5px solid var(--border);padding:12px;margin-bottom:8px}
+.cliente-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.cliente-num{width:24px;height:24px;border-radius:50%;background:var(--gl);color:var(--gd);font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.name-inp{flex:1;font-size:14px;padding:5px 10px;height:34px;border:0.5px solid var(--border);border-radius:var(--rsm);background:var(--warm);color:var(--text);font-family:inherit}
+.name-inp:focus{outline:none;border-color:var(--g)}
+.btn-del{background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;font-size:20px;line-height:1}
+
+/* ── Ligne prestation / vente ── */
+.ligne-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;background:var(--warm);border-radius:var(--rsm);padding:8px 10px;border:0.5px solid var(--border)}
+.ligne-lbl{font-size:11px;font-weight:600;color:var(--g);text-transform:uppercase;letter-spacing:.04em;width:76px;flex-shrink:0}
+.ligne-amt{width:80px;font-size:15px;padding:4px 8px;height:34px;border:0.5px solid var(--border);border-radius:var(--rsm);background:var(--bg);color:var(--text);font-family:inherit;text-align:right;flex-shrink:0}
+.ligne-amt:focus{outline:none;border-color:var(--g)}
+.eur{font-size:12px;color:var(--muted);flex-shrink:0}
+.pay-select{flex:1;height:34px;border:0.5px solid var(--border);border-radius:var(--rsm);background:var(--bg);color:var(--text);font-family:inherit;font-size:12px;padding:0 6px;min-width:0;cursor:pointer}
+.pay-select:focus{outline:none;border-color:var(--g)}
+.pay-select.meme{background:var(--gl);color:var(--gd);font-weight:600;border-color:var(--g)}
+
+.ct-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border)}
+.ct-lbl{font-size:11px;color:var(--muted)}
+.ct-detail{font-size:10px;color:var(--muted);margin-top:2px}
+.ct-val{font-size:15px;font-weight:700;color:var(--gd);text-align:right}
+
+.btn-add{width:100%;padding:12px;background:var(--gl);color:var(--gd);border:1px dashed var(--g);border-radius:var(--radius);font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;margin:4px 0 10px;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-add:active{background:var(--g);color:#fff}
+
+/* totaux */
+.totaux-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px}
+.tot-col{background:var(--warm);border-radius:var(--rsm);padding:8px 6px;text-align:center;border:0.5px solid var(--border)}
+.tot-col-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.tot-col-val{font-size:13px;font-weight:600;color:var(--text)}
+.tot-col-sub{font-size:9px;color:var(--muted);margin-top:2px}
+.total-bar{display:flex;justify-content:space-between;align-items:center;background:var(--g);border-radius:var(--rsm);padding:10px 14px}
+.total-bar-lbl{font-size:13px;font-weight:500;color:var(--gm)}
+.total-bar-val{font-size:22px;font-weight:700;color:#fff}
+.fond-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0 2px}
+.fond-lbl{font-size:12px;color:var(--muted)}
+.fond-inp{width:90px;font-size:13px;padding:4px 8px;height:32px;border:0.5px solid var(--border);border-radius:var(--rsm);background:var(--warm);color:var(--text);font-family:inherit;text-align:right}
+.fond-inp:focus{outline:none;border-color:var(--g)}
+
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.act-btn{padding:12px 8px;border:0.5px solid var(--border);border-radius:var(--rsm);background:var(--bg);color:var(--gd);font-size:13px;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:500}
+.act-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
+.act-btn:active{background:var(--gl)}
+.act-btn.primary{background:var(--g);color:#fff;border-color:var(--g)}
+.act-btn.primary:active{background:var(--gd)}
+.act-btn.full{grid-column:1/-1}
+
+/* historique */
+.hist-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg);border-radius:var(--rsm);border:0.5px solid var(--border);margin-bottom:6px;cursor:pointer}
+.hist-item:active{background:var(--gl)}
+.hist-date{font-size:13px;font-weight:500}
+.hist-day{font-size:11px;color:var(--muted);margin-top:1px}
+.hist-total{font-size:15px;font-weight:700;color:var(--gd)}
+.hist-nb{font-size:10px;color:var(--muted);text-align:right;margin-top:1px}
+.hist-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px}
+
+/* mensuel */
+.mois-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.mois-titre{font-size:16px;font-weight:600;color:var(--gd)}
+.mois-nav-btn{background:var(--gl);border:none;border-radius:var(--rsm);padding:6px 14px;cursor:pointer;color:var(--gd);font-size:18px}
+.mensuel-table{width:100%;border-collapse:collapse;font-size:12px}
+.mensuel-table th{background:var(--gl);color:var(--gd);padding:7px 4px;text-align:center;font-size:10px;font-weight:600;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.mensuel-table th:first-child{text-align:left;padding-left:8px}
+.mensuel-table td{padding:7px 4px;text-align:center;border-bottom:0.5px solid var(--border)}
+.mensuel-table td:first-child{text-align:left;padding-left:8px}
+.mensuel-table tr.fermé td{color:var(--muted);font-size:11px}
+.mensuel-table tr.travaillé td:last-child{font-weight:700;color:var(--gd)}
+.mensuel-table tr.total-row td{background:var(--g);color:#fff;font-weight:700}
+.bilan-cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.bilan-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rsm);padding:10px;text-align:center}
+.bilan-card.hl{background:var(--g);border-color:var(--g)}
+.bilan-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.bilan-val{font-size:15px;font-weight:700;color:var(--gd)}
+.bilan-card.hl .bilan-lbl{color:var(--gm)}
+.bilan-card.hl .bilan-val{color:#fff;font-size:18px}
+
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gd);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:all .3s;z-index:999;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg);border-radius:var(--radius) var(--radius) 0 0;padding:20px 16px 32px;width:100%;max-width:500px}
+.modal-title{font-size:16px;font-weight:600;color:var(--gd);margin-bottom:10px}
+.modal-btn{width:100%;padding:13px;border:none;border-radius:var(--rsm);font-size:14px;font-family:inherit;cursor:pointer;margin-bottom:8px;font-weight:500}
+.modal-btn.green{background:var(--g);color:#fff}
+.modal-btn.outline{background:var(--bg);color:var(--gd);border:0.5px solid var(--border)}
+.date-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center}
+.date-modal.open{display:flex}
+.date-modal-inner{background:var(--bg);border-radius:var(--radius);padding:20px;width:90%;max-width:340px}
+.date-modal input[type=date]{width:100%;padding:10px;font-size:16px;border:0.5px solid var(--border);border-radius:var(--rsm);font-family:inherit;margin:10px 0 14px}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <button class="nav-btn active" id="nav-saisie" onclick="showPage('saisie')">
+    <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+    Saisie
+  </button>
+  <button class="nav-btn" id="nav-historique" onclick="showPage('historique')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Historique
+  </button>
+  <button class="nav-btn" id="nav-mensuel" onclick="showPage('mensuel')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Mensuel
+  </button>
+</nav>
+
+<!-- SAISIE -->
+<div class="page active" id="page-saisie">
+  <div class="salon-header">
+    <div><div class="salon-name">🌿 Salon Eden</div><div class="salon-sub">Journal de caisse</div></div>
+    <button class="date-pill" onclick="openDateModal()" id="date-display">…</button>
+  </div>
+  <div style="padding:12px">
+    <div id="clientes-list"></div>
+    <button class="btn-add" onclick="addCliente()">＋ Ajouter une cliente</button>
+    <div class="card">
+      <div class="card-title">Récapitulatif de la journée</div>
+      <div class="totaux-grid">
+        <div class="tot-col">
+          <div class="tot-col-lbl">Chèques</div>
+          <div class="tot-col-val" id="t-cheq">0,00 €</div>
+          <div class="tot-col-sub" id="nb-cheq">0 chèque(s)</div>
+        </div>
+        <div class="tot-col">
+          <div class="tot-col-lbl">Espèces</div>
+          <div class="tot-col-val" id="t-esp">0,00 €</div>
+          <div class="tot-col-sub" id="nb-esp">0 paiement(s)</div>
+        </div>
+        <div class="tot-col">
+          <div class="tot-col-lbl">Virements</div>
+          <div class="tot-col-val" id="t-vir">0,00 €</div>
+          <div class="tot-col-sub" id="nb-vir">0 virement(s)</div>
+        </div>
+      </div>
+      <div class="total-bar">
+        <span class="total-bar-lbl">Total journée</span>
+        <span class="total-bar-val" id="t-jour">0,00 €</span>
+      </div>
+      <div class="fond-row">
+        <span class="fond-lbl">Fond de caisse</span>
+        <div style="display:flex;align-items:center;gap:4px">
+          <input type="number" class="fond-inp" id="fond" placeholder="0,00" step="0.01" min="0" oninput="recalc()">
+          <span style="font-size:12px;color:var(--muted)">€</span>
+        </div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="act-btn" onclick="genPDFJour()">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        PDF journée
+      </button>
+      <button class="act-btn primary" onclick="sauvegarder()">
+        <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Enregistrer
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORIQUE -->
+<div class="page" id="page-historique">
+  <div class="salon-header">
+    <div><div class="salon-name">🌿 Salon Eden</div><div class="salon-sub">Historique des journées</div></div>
+  </div>
+  <div style="padding:12px" id="historique-list">
+    <div class="hist-empty">Aucune journée enregistrée.</div>
+  </div>
+</div>
+
+<!-- MENSUEL -->
+<div class="page" id="page-mensuel">
+  <div class="salon-header">
+    <div><div class="salon-name">🌿 Salon Eden</div><div class="salon-sub">Récapitulatif mensuel</div></div>
+  </div>
+  <div style="padding:12px">
+    <div class="mois-nav">
+      <button class="mois-nav-btn" onclick="changeMois(-1)">‹</button>
+      <span class="mois-titre" id="mois-titre">—</span>
+      <button class="mois-nav-btn" onclick="changeMois(+1)">›</button>
+    </div>
+    <div class="bilan-cards" id="bilan-cards"></div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="mensuel-table">
+        <thead><tr><th>Date</th><th>Jour</th><th>Chèq.</th><th>Esp.</th><th>Vir.</th><th>Total</th></tr></thead>
+        <tbody id="mensuel-body"></tbody>
+      </table>
+    </div>
+    <div class="actions">
+      <button class="act-btn full primary" onclick="genPDFMois()">
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:#fff;fill:none;stroke-width:1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Télécharger PDF mensuel
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div class="date-modal" id="date-modal">
+  <div class="date-modal-inner">
+    <div class="modal-title">Changer la date</div>
+    <input type="date" id="date-picker">
+    <button class="modal-btn green" onclick="setDate()">Confirmer</button>
+    <button class="modal-btn outline" onclick="closeModal('date-modal')">Annuler</button>
+  </div>
+</div>
+<div class="modal-overlay" id="save-modal">
+  <div class="modal">
+    <div class="modal-title">✅ Journée enregistrée</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px" id="save-msg"></p>
+    <button class="modal-btn green" onclick="closeModal('save-modal')">OK</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const JOURS=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+const MOIS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const OPEN=new Set([2,4,5,6]);
+
+let currentDate=new Date(), clientes=[], counter=0;
+let currentMoisYear={y:currentDate.getFullYear(),m:currentDate.getMonth()};
+
+// ── Stockage ──
+function saveJournee(ds,data){localStorage.setItem('eden_'+ds,JSON.stringify(data))}
+function loadJournee(ds){const d=localStorage.getItem('eden_'+ds);return d?JSON.parse(d):null}
+function allJournees(){
+  const r=[];
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('eden_'))r.push(JSON.parse(localStorage.getItem(k)))}
+  return r.sort((a,b)=>b.date.localeCompare(a.date))
+}
+
+// ── Utilitaires ──
+function fmt(n){return(n||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'}
+function fmtN(n){return(n||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function v(id){const x=parseFloat(document.getElementById(id)?.value);return isNaN(x)?0:x}
+function dateStr(d){const dd=d||currentDate;return dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0')}
+function dateDisplay(d){const dd=(typeof d==='string')?new Date(d+'T12:00:00'):d;return JOURS[dd.getDay()]+' '+dd.getDate()+' '+MOIS[dd.getMonth()]+' '+dd.getFullYear()}
+
+// ── Navigation ──
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
+  if(name==='historique')renderHistorique();
+  if(name==='mensuel')renderMensuel();
+}
+
+// ── Date ──
+function initDate(){document.getElementById('date-display').textContent=dateDisplay(currentDate);document.getElementById('date-picker').value=dateStr()}
+function openDateModal(){document.getElementById('date-picker').value=dateStr();document.getElementById('date-modal').classList.add('open')}
+function setDate(){const val=document.getElementById('date-picker').value;if(val){currentDate=new Date(val+'T12:00:00');document.getElementById('date-display').textContent=dateDisplay(currentDate)}closeModal('date-modal')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+
+// ── Options du select ventes (dépend du mode prestation) ──
+const MODES=[
+  {val:'cheque',   label:'Chèque'},
+  {val:'especes',  label:'Espèces'},
+  {val:'virement', label:'Virement'},
+];
+
+function buildVenteOptions(id, modePrest, modeVente){
+  const sel=document.getElementById('vsel-'+id);
+  let meme='';
+  if(modePrest==='cheque')
+    meme=`<option value="meme_cheque"${modeVente==='meme_cheque'?' selected':''}>↳ Même chèque</option>`;
+  else if(modePrest==='virement')
+    meme=`<option value="meme_virement"${modeVente==='meme_virement'?' selected':''}>↳ Même virement</option>`;
+  sel.innerHTML = meme + MODES.map(m=>`<option value="${m.val}"${modeVente===m.val?' selected':''}>${m.label}</option>`).join('');
+  styleMemeSelect(id);
+}
+
+function styleMemeSelect(id){
+  const sel=document.getElementById('vsel-'+id);
+  const isMeme=sel.value==='meme_cheque'||sel.value==='meme_virement';
+  if(isMeme) sel.classList.add('meme'); else sel.classList.remove('meme');
+}
+
+function onPrestChange(id){
+  const modePrest=document.getElementById('psel-'+id).value;
+  const modeVente=document.getElementById('vsel-'+id).value;
+  const isMeme=modeVente==='meme_cheque'||modeVente==='meme_virement';
+  let newVente;
+  if(modePrest==='cheque') newVente='meme_cheque';
+  else if(modePrest==='virement') newVente='meme_virement';
+  else newVente=isMeme?'cheque':modeVente;
+  buildVenteOptions(id, modePrest, newVente);
+  recalc();
+}
+function onVenteChange(id){styleMemeSelect(id);recalc()}
+
+// ── Calcul par cliente ──
+// Retourne {cheques, especes, virements, nbCheques, nbEspeces, nbVirements}
+function calcCliente(id){
+  const prest=v('prest-'+id), vente=v('vente-'+id);
+  const modePrest=document.getElementById('psel-'+id)?.value||'cheque';
+  const modeVente=document.getElementById('vsel-'+id)?.value||'meme_cheque';
+  let cheques=0,especes=0,virements=0,nbC=0,nbE=0,nbV=0;
+
+  // Prestation
+  if(modePrest==='cheque'){cheques+=prest;if(prest>0)nbC++}
+  else if(modePrest==='especes'){especes+=prest;if(prest>0)nbE++}
+  else if(modePrest==='virement'){virements+=prest;if(prest>0)nbV++}
+
+  // Vente
+  if(modeVente==='meme_cheque'){
+    cheques+=vente; // s'ajoute au même chèque, pas de nouveau compte
+  } else if(modeVente==='meme_virement'){
+    virements+=vente; // s'ajoute au même virement, pas de nouveau compte
+  } else if(modeVente==='cheque'){cheques+=vente;if(vente>0)nbC++}
+  else if(modeVente==='especes'){especes+=vente;if(vente>0)nbE++}
+  else if(modeVente==='virement'){virements+=vente;if(vente>0)nbV++}
+
+  return{cheques,especes,virements,nbC,nbE,nbV,tot:prest+vente,prest,vente,modePrest,modeVente}
+}
+
+function recalc(){
+  let tC=0,tE=0,tV=0,nbC=0,nbE=0,nbV=0;
+  clientes.forEach(id=>{
+    const c=calcCliente(id);
+    tC+=c.cheques;tE+=c.especes;tV+=c.virements;
+    nbC+=c.nbC;nbE+=c.nbE;nbV+=c.nbV;
+    const el=document.getElementById('ct-'+id);
+    if(el){
+      el.innerHTML='<div style="text-align:right"><div style="font-size:15px;font-weight:700;color:var(--gd)">'+fmt(c.tot)+'</div>'
+        +'<div style="font-size:10px;color:var(--muted);margin-top:2px">'+detailPaiement(c)+'</div></div>';
+    }
+  });
+  document.getElementById('t-cheq').textContent=fmt(tC);
+  document.getElementById('t-esp').textContent=fmt(tE);
+  document.getElementById('t-vir').textContent=fmt(tV);
+  document.getElementById('t-jour').textContent=fmt(tC+tE+tV);
+  document.getElementById('nb-cheq').textContent=nbC+' chèque(s)';
+  document.getElementById('nb-esp').textContent=nbE+' paiement(s)';
+  document.getElementById('nb-vir').textContent=nbV+' virement(s)';
+}
+
+function detailPaiement(c){
+  const parts=[];
+  if(c.cheques>0)parts.push(fmtN(c.cheques)+' € chèque');
+  if(c.especes>0)parts.push(fmtN(c.especes)+' € espèces');
+  if(c.virements>0)parts.push(fmtN(c.virements)+' € virement');
+  return parts.join(' · ');
+}
+
+function addCliente(){
+  counter++;const id=counter;clientes.push(id);
+  const div=document.createElement('div');
+  div.className='cliente-card';div.id='cc-'+id;
+  div.innerHTML=`
+    <div class="cliente-head">
+      <div class="cliente-num">${id}</div>
+      <input class="name-inp" type="text" placeholder="Nom de la cliente" id="nom-${id}">
+      <button class="btn-del" onclick="rmCliente(${id})">×</button>
+    </div>
+    <div class="ligne-row">
+      <span class="ligne-lbl">Prestation</span>
+      <input class="ligne-amt" type="number" step="0.01" min="0" placeholder="0,00" id="prest-${id}" oninput="recalc()">
+      <span class="eur">€</span>
+      <select class="pay-select" id="psel-${id}" onchange="onPrestChange(${id})">
+        <option value="cheque">Chèque</option>
+        <option value="especes">Espèces</option>
+        <option value="virement">Virement</option>
+      </select>
+    </div>
+    <div class="ligne-row">
+      <span class="ligne-lbl">Vente</span>
+      <input class="ligne-amt" type="number" step="0.01" min="0" placeholder="0,00" id="vente-${id}" oninput="recalc()">
+      <span class="eur">€</span>
+      <select class="pay-select meme" id="vsel-${id}" onchange="onVenteChange(${id})">
+        <option value="meme_cheque" selected>↳ Même chèque</option>
+        <option value="cheque">Chèque</option>
+        <option value="especes">Espèces</option>
+        <option value="virement">Virement</option>
+      </select>
+    </div>
+    <div class="ct-row">
+      <span class="ct-lbl">Total cliente</span>
+      <div id="ct-${id}"><div style="font-size:15px;font-weight:700;color:var(--gd)">0,00 €</div></div>
+    </div>`;
+  document.getElementById('clientes-list').appendChild(div);
+  recalc();
+  document.getElementById('nom-'+id).focus();
+}
+
+function rmCliente(id){clientes=clientes.filter(c=>c!==id);document.getElementById('cc-'+id)?.remove();recalc()}
+
+// ── Sauvegarde ──
+function getJourneeData(){
+  const lignes=clientes.map(id=>{
+    const c=calcCliente(id);
+    return{nom:document.getElementById('nom-'+id)?.value||'',...c}
+  });
+  let tC=0,tE=0,tV=0,nbC=0,nbE=0,nbV=0;
+  lignes.forEach(l=>{tC+=l.cheques;tE+=l.especes;tV+=l.virements;nbC+=l.nbC;nbE+=l.nbE;nbV+=l.nbV});
+  return{date:dateStr(),fond:v('fond'),lignes,tC,tE,tV,total:tC+tE+tV,nbC,nbE,nbV}
+}
+
+function sauvegarder(){
+  const data=getJourneeData();
+  saveJournee(data.date,data);
+  document.getElementById('save-msg').textContent=`Journée du ${dateDisplay(currentDate)} enregistrée — Total : ${fmt(data.total)}`;
+  document.getElementById('save-modal').classList.add('open');
+}
+
+// ── Historique ──
+function renderHistorique(){
+  const list=document.getElementById('historique-list');
+  const jj=allJournees();
+  if(!jj.length){list.innerHTML='<div class="hist-empty">Aucune journée enregistrée.<br>Saisissez et enregistrez une journée pour la voir ici.</div>';return}
+  list.innerHTML=jj.map(j=>`
+    <div class="hist-item" onclick="chargerJournee('${j.date}')">
+      <div><div class="hist-date">${dateDisplay(j.date)}</div><div class="hist-day">${j.lignes.length} cliente(s)</div></div>
+      <div style="text-align:right"><div class="hist-total">${fmt(j.total)}</div><div class="hist-nb">Chèq. ${fmt(j.tC)} · Esp. ${fmt(j.tE)}</div></div>
+    </div>`).join('');
+}
+
+function chargerJournee(ds){
+  const data=loadJournee(ds);if(!data)return;
+  currentDate=new Date(ds+'T12:00:00');
+  document.getElementById('date-display').textContent=dateDisplay(currentDate);
+  document.getElementById('clientes-list').innerHTML='';
+  clientes=[];counter=0;
+  data.lignes.forEach(l=>{
+    addCliente();const id=counter;
+    document.getElementById('nom-'+id).value=l.nom;
+    document.getElementById('prest-'+id).value=l.prest||'';
+    document.getElementById('vente-'+id).value=l.vente||'';
+    document.getElementById('psel-'+id).value=l.modePrest||'cheque';
+    buildVenteOptions(id,l.modePrest||'cheque',l.modeVente||'meme_cheque');
+  });
+  document.getElementById('fond').value=data.fond||'';
+  recalc();showPage('saisie');showToast('Journée du '+dateDisplay(currentDate)+' chargée');
+}
+
+// ── Mensuel ──
+function changeMois(delta){
+  currentMoisYear.m+=delta;
+  if(currentMoisYear.m>11){currentMoisYear.m=0;currentMoisYear.y++}
+  if(currentMoisYear.m<0){currentMoisYear.m=11;currentMoisYear.y--}
+  renderMensuel();
+}
+function renderMensuel(){
+  const{y,m}=currentMoisYear;
+  document.getElementById('mois-titre').textContent=MOIS[m]+' '+y;
+  const nbDays=new Date(y,m+1,0).getDate();
+  let tC=0,tE=0,tV=0,tJ=0,jours=0;const rows=[];
+  for(let d=1;d<=nbDays;d++){
+    const dt=new Date(y,m,d);
+    const ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const data=loadJournee(ds);
+    const isOpen=OPEN.has(dt.getDay());
+    const dateAff=String(d).padStart(2,'0')+'/'+String(m+1).padStart(2,'0');
+    const nomJ=JOURS[dt.getDay()].substring(0,3)+'.';
+    if(!isOpen||!data){rows.push(`<tr class="fermé"><td>${dateAff}</td><td>${nomJ}</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>`)}
+    else{tC+=data.tC;tE+=data.tE;tV+=data.tV;tJ+=data.total;jours++;
+      rows.push(`<tr class="travaillé"><td>${dateAff}</td><td>${nomJ}</td><td>${fmtN(data.tC)}</td><td>${fmtN(data.tE)}</td><td>${fmtN(data.tV)}</td><td>${fmtN(data.total)}</td></tr>`)}
+  }
+  rows.push(`<tr class="total-row"><td colspan="2">${jours} jour(s)</td><td>${fmtN(tC)}</td><td>${fmtN(tE)}</td><td>${fmtN(tV)}</td><td>${fmtN(tJ)}</td></tr>`);
+  document.getElementById('mensuel-body').innerHTML=rows.join('');
+  document.getElementById('bilan-cards').innerHTML=`
+    <div class="bilan-card"><div class="bilan-lbl">Chèques</div><div class="bilan-val">${fmt(tC)}</div></div>
+    <div class="bilan-card"><div class="bilan-lbl">Espèces</div><div class="bilan-val">${fmt(tE)}</div></div>
+    <div class="bilan-card"><div class="bilan-lbl">Virements</div><div class="bilan-val">${fmt(tV)}</div></div>
+    <div class="bilan-card hl"><div class="bilan-lbl">CA mensuel</div><div class="bilan-val">${fmt(tJ)}</div></div>`;
+}
+
+// ── PDF Journée ──
+function genPDFJour(){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const data=getJourneeData();
+  const G=[90,122,74],GL=[238,243,232],WARM=[247,244,239],GRAY=[160,160,160];
+  const W=210,M=12,CW=W-M*2;
+  const modeLabel={cheque:'Chèque',especes:'Espèces',virement:'Virement',meme_cheque:'Même chèque',meme_virement:'Même virement'};
+
+  doc.setFillColor(...G);doc.roundedRect(M,10,CW,18,3,3,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(14);doc.setFont('helvetica','bold');
+  doc.text('Salon Eden',M+6,20);
+  doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(200,217,184);
+  doc.text('67 rue Marcel Sembat · Lanester · 06 25 05 35 86',W/2,20,{align:'center'});
+  doc.setTextColor(255,255,255);doc.setFontSize(9);doc.setFont('helvetica','bold');
+  doc.text('Journal de caisse',W-M-4,18,{align:'right'});
+  doc.setFont('helvetica','normal');doc.setFontSize(8);
+  doc.text(dateDisplay(data.date),W-M-4,23,{align:'right'});
+
+  const head=[['Cliente','Prestation','Règl. prest.','Vente','Règl. vente','Total']];
+  const body=data.lignes.map(l=>[
+    l.nom||'—',
+    l.prest?fmtN(l.prest)+' €':'—',
+    modeLabel[l.modePrest]||'—',
+    l.vente?fmtN(l.vente)+' €':'—',
+    modeLabel[l.modeVente]||'—',
+    fmtN(l.tot)+' €'
+  ]);
+  while(body.length<8)body.push(['','','','','','']);
+
+  doc.autoTable({startY:32,head,body,theme:'grid',
+    headStyles:{fillColor:G,textColor:255,fontSize:8,fontStyle:'bold',halign:'center'},
+    bodyStyles:{fontSize:9,halign:'center'},
+    columnStyles:{0:{halign:'left',cellWidth:40},1:{cellWidth:22},2:{cellWidth:26},3:{cellWidth:22},4:{cellWidth:26},5:{cellWidth:22,fontStyle:'bold'}},
+    alternateRowStyles:{fillColor:WARM},margin:{left:M,right:M},tableWidth:CW});
+
+  const y=doc.lastAutoTable.finalY+5;
+  doc.autoTable({startY:y,
+    body:[['Nb chèques : '+data.nbC,'Total chèques : '+fmtN(data.tC)+' €','Total espèces : '+fmtN(data.tE)+' €','Total virements : '+fmtN(data.tV)+' €']],
+    theme:'grid',bodyStyles:{fontSize:8,fillColor:GL},
+    columnStyles:{0:{cellWidth:34},1:{cellWidth:48},2:{cellWidth:48},3:{cellWidth:48}},
+    margin:{left:M,right:M},tableWidth:CW});
+
+  const y2=doc.lastAutoTable.finalY+4;
+  doc.setFillColor(...G);doc.roundedRect(M,y2,CW,14,3,3,'F');
+  doc.setTextColor(200,217,184);doc.setFontSize(10);doc.setFont('helvetica','bold');
+  doc.text('TOTAL JOURNÉE',M+6,y2+9);
+  doc.setTextColor(255,255,255);doc.setFontSize(15);
+  doc.text(fmtN(data.total)+' €',W/2+10,y2+9,{align:'center'});
+  doc.setFontSize(8);doc.setTextColor(200,217,184);
+  doc.text('Fond de caisse :',W-M-28,y2+6);
+  doc.setTextColor(255,255,255);doc.setFontSize(10);
+  doc.text(fmtN(data.fond)+' €',W-M-4,y2+10,{align:'right'});
+  doc.setFontSize(7);doc.setTextColor(...GRAY);doc.setFont('helvetica','normal');
+  doc.text('Salon Eden · Espace privatif pour femmes · Spécialiste des colorations bio-végétales',W/2,285,{align:'center'});
+  doc.save('journal-caisse-eden-'+data.date+'.pdf');
+  showToast('📄 PDF téléchargé');
+}
+
+// ── PDF Mensuel ──
+function genPDFMois(){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const{y,m}=currentMoisYear;
+  const G=[90,122,74],GL=[238,243,232],WARM=[247,244,239],GRAY=[160,160,160];
+  const W=210,M_=12,CW=W-M_*2;
+  const nbDays=new Date(y,m+1,0).getDate();
+
+  doc.setFillColor(...G);doc.roundedRect(M_,10,CW,18,3,3,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(14);doc.setFont('helvetica','bold');doc.text('Salon Eden',M_+6,20);
+  doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(200,217,184);
+  doc.text('67 rue Marcel Sembat · Lanester · 06 25 05 35 86',W/2,20,{align:'center'});
+  doc.setTextColor(255,255,255);doc.setFontSize(9);doc.setFont('helvetica','bold');doc.text('Récapitulatif mensuel',W-M_-4,18,{align:'right'});
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text(MOIS[m]+' '+y,W-M_-4,23,{align:'right'});
+
+  let tC=0,tE=0,tV=0,tJ=0,jours=0;const body=[];
+  for(let d=1;d<=nbDays;d++){
+    const dt=new Date(y,m,d);
+    const ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const data=loadJournee(ds);const isOpen=OPEN.has(dt.getDay());
+    const dateAff=String(d).padStart(2,'0')+'/'+String(m+1).padStart(2,'0');
+    const nomJ=JOURS[dt.getDay()];
+    if(!isOpen||!data){body.push([dateAff,nomJ,'—','—','—','—'])}
+    else{tC+=data.tC;tE+=data.tE;tV+=data.tV;tJ+=data.total;jours++;
+      body.push([dateAff,nomJ,fmtN(data.tC)+' €',fmtN(data.tE)+' €',fmtN(data.tV)+' €',fmtN(data.total)+' €'])}
+  }
+  body.push([jours+' jour(s)','TOTAUX',fmtN(tC)+' €',fmtN(tE)+' €',fmtN(tV)+' €',fmtN(tJ)+' €']);
+
+  doc.autoTable({startY:32,head:[['Date','Jour','Chèques','Espèces','Virements','Total']],body,theme:'grid',
+    headStyles:{fillColor:G,textColor:255,fontSize:8,fontStyle:'bold',halign:'center'},
+    bodyStyles:{fontSize:8,halign:'center'},
+    columnStyles:{0:{cellWidth:22},1:{cellWidth:34,halign:'left'},5:{fontStyle:'bold'}},
+    alternateRowStyles:{fillColor:WARM},margin:{left:M_,right:M_},tableWidth:CW,
+    didParseCell:(d)=>{
+      if(d.row.index===body.length-1){d.cell.styles.fillColor=G;d.cell.styles.textColor=255;d.cell.styles.fontStyle='bold'}
+      if(body[d.row.index]?.[2]==='—'){d.cell.styles.textColor=GRAY}
+    }});
+
+  const y2=doc.lastAutoTable.finalY+5;
+  doc.setFillColor(...G);doc.roundedRect(M_,y2,CW,16,3,3,'F');
+  doc.setTextColor(200,217,184);doc.setFontSize(9);doc.setFont('helvetica','bold');
+  doc.text('BILAN '+MOIS[m].toUpperCase()+' '+y,M_+6,y2+10);
+  [[' Chèques',fmtN(tC)+' €',W/2-28],[' Espèces',fmtN(tE)+' €',W/2+4]].forEach(([lbl,val,x])=>{
+    doc.setFontSize(7);doc.setTextColor(200,217,184);doc.text(lbl,x,y2+6,{align:'center'});
+    doc.setFontSize(9);doc.setTextColor(255,255,255);doc.text(val,x,y2+12,{align:'center'});
+  });
+  doc.setFontSize(7);doc.setTextColor(200,217,184);doc.text('CA MENSUEL',W-M_-18,y2+6,{align:'center'});
+  doc.setFontSize(12);doc.setTextColor(255,255,255);doc.text(fmtN(tJ)+' €',W-M_-18,y2+13,{align:'center'});
+  doc.setFontSize(7);doc.setTextColor(...GRAY);doc.setFont('helvetica','normal');
+  doc.text('Salon Eden · Espace privatif pour femmes · Spécialiste des colorations bio-végétales',W/2,285,{align:'center'});
+  doc.save('eden-recap-'+MOIS[m].toLowerCase()+'-'+y+'.pdf');
+  showToast('📄 PDF mensuel téléchargé');
+}
+
+// ── Toast ──
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800)}
+
+// ── Init ──
+initDate();addCliente();
+</script>
+</body>
+</html>
